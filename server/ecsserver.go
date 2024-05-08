@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/99designs/aws-vault/v6/iso8601"
-	"github.com/99designs/aws-vault/v6/vault"
+	"github.com/99designs/aws-vault/v7/iso8601"
+	"github.com/99designs/aws-vault/v7/vault"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
@@ -63,10 +63,10 @@ type EcsServer struct {
 	server            http.Server
 	cache             sync.Map
 	baseCredsProvider aws.CredentialsProvider
-	config            *vault.Config
+	config            *vault.ProfileConfig
 }
 
-func NewEcsServer(baseCredsProvider aws.CredentialsProvider, config *vault.Config, authToken string, port int, lazyLoadBaseCreds bool) (*EcsServer, error) {
+func NewEcsServer(ctx context.Context, baseCredsProvider aws.CredentialsProvider, config *vault.ProfileConfig, authToken string, port int, lazyLoadBaseCreds bool) (*EcsServer, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func NewEcsServer(baseCredsProvider aws.CredentialsProvider, config *vault.Confi
 
 	credsCache := aws.NewCredentialsCache(baseCredsProvider)
 	if !lazyLoadBaseCreds {
-		_, err := credsCache.Retrieve(context.TODO())
+		_, err := credsCache.Retrieve(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("Retrieving creds: %w", err)
 		}

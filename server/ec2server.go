@@ -9,25 +9,19 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/99designs/aws-vault/v6/iso8601"
+	"github.com/99designs/aws-vault/v7/iso8601"
 	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 const ec2CredentialsServerAddr = "127.0.0.1:9099"
 
 // StartEc2CredentialsServer starts a EC2 Instance Metadata server and endpoint proxy
-func StartEc2CredentialsServer(credsProvider aws.CredentialsProvider, region string) error {
-	if !isProxyRunning() {
-		if err := StartEc2EndpointProxyServerProcess(); err != nil {
-			return err
-		}
-	}
-
+func StartEc2CredentialsServer(ctx context.Context, credsProvider aws.CredentialsProvider, region string) error {
 	credsCache := aws.NewCredentialsCache(credsProvider)
 
 	// pre-fetch credentials so that we can respond quickly to the first request
 	// SDKs seem to very aggressively timeout
-	_, _ = credsCache.Retrieve(context.TODO())
+	_, _ = credsCache.Retrieve(ctx)
 
 	go startEc2CredentialsServer(credsCache, region)
 
@@ -53,7 +47,7 @@ func startEc2CredentialsServer(credsProvider aws.CredentialsProvider, region str
 	})
 
 	// used by AWS SDK to determine region
-	router.HandleFunc("/latest/meta-data/dynamic/instance-identity/document", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/latest/dynamic/instance-identity/document", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"region": "`+region+`"}`)
 	})
 
